@@ -79,22 +79,23 @@ trackSegment *NewSegment(int space, track* t, int maxx, int maxy, int random){
 	//now it's generating a random move to the left or right but i only want it to move by one
 	//but i want it to move over one space a random number of times
 	//whatever random returns is the number of times I want the loop to run and draw things in a certain direction
-	int j;
-	s->left = NewParticle(2, '>', currY, (maxx-strlen("<=>"))/2-20-1);
-	s->right = NewParticle(2, '<', currY, (maxx-strlen("<=>"))/2+5-1   );
-	
-	if(random >=5){
-		for(j = 0; j<random; j++){
-			mvaddch(s->left->c[0]-j, s->left->c[1], '>');
-			mvaddch(s->right->c[0]-j, s->right->c[1], '<');
-		}
-	}
-	else if(random<5){
-		for(j = 0; j<random; j++){
+	int j,k;
+	s->left = NewParticle(2, '>', currY, (maxx-strlen("<=>"))/2-20);
+	s->right = NewParticle(2, '<', currY, (maxx-strlen("<=>"))/2+5  );
+	//move left (random) times
+//	if(random >=5){
+	//	for(j = 0; j<random; j++){
 			mvaddch(s->left->c[0]+j, s->left->c[1], '>');
 			mvaddch(s->right->c[0]+j, s->right->c[1], '<');
-		}
-	}
+//		}
+//	}
+	//move right (random) times
+//	else if(random<5){
+	//	for(j = 0; j<random; j++){
+	//		mvaddch(s->left->c[0]+j, s->left->c[1]+j, '>');
+//			mvaddch(s->right->c[0]+j, s->right->c[1]+j, '<');
+	//	}
+//	}
 	refresh();
 	
 	return s;

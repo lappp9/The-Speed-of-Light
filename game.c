@@ -1,8 +1,10 @@
 #include <ncurses.h>				/* ncurses.h includes stdio.h */  
 #include <string.h> 
- #define WIDTH 30
+#include "particle.h"
+#define WIDTH 30
 #define HEIGHT 10 
 int playMenu(int maxy, int maxx);
+
 
 int main()
 {
@@ -28,19 +30,18 @@ int main()
 	
 	
 	//print out some info for myself
-	mvprintw(starty, startx, "The window begins at y: %d and x: %d in the top left and y: %d and x: %d at the bottom right.", starty, startx, maxy,maxx);
+	//mvprintw(starty, startx, "The window begins at y: %d and x: %d in the top left and y: %d and x: %d at the bottom right.", starty, startx, maxy,maxx);
+	track *theTrack = NewTrack(maxx, maxy);
+	mvprintw(theTrack->head->left->c[0], ((maxx-strlen("<=>"))/2)-20,"%c", theTrack->head->left->ch );
+	mvprintw(theTrack->head->right->c[0], ((maxx-strlen("<=>"))/2)+5,"%c", theTrack->head->right->ch );
 	
 	//start them with a ship in the middle of the screen
 	mvprintw(maxy-2,(maxx-strlen("<=>"))/2, "<=>"); 
-	refresh();
-	starty = (LINES - height) / 2;	
-	startx = (COLS - width) / 2;	
-	attroff(COLOR_PAIR(1));
+	refresh();	
 
-	
+
 	//THIS IS WHERE THE GAME BEGINS
-	while(1){
-		while((ch = getch()) != 'q')
+	while((ch = getch()) != 'q')
     { 
       getyx(stdscr, y, x);		/* get the current curser position */
       switch(ch)
@@ -50,26 +51,22 @@ int main()
           //later i'll replace it with one clear() on each loop and then redraw the whole screen
           if(x > 5){
             mvaddstr(y, x-3, "   ");
-            //clear();
-            mvaddstr(y, x-4, "<=>");
+            mvaddstr(y, x-5, "<=>");
           }
           break;
         case KEY_RIGHT:
           if(x < maxx-strlen("<=>")){
             mvaddstr(y, x-3, "   ");
-            //clear();
-            mvaddstr(y, x-2, "<=>");
+            mvaddstr(y, x-1, "<=>");
           }
           break;
        }
     }
 
-		attron(COLOR_PAIR(1));
-		refresh();
-		attroff(COLOR_PAIR(1));
-	  endwin();
-	  return 0;
-	}
+	refresh();
+	attroff(COLOR_PAIR(1));
+	endwin();
+	return 0;
 }
 
 int playMenu(int maxy, int maxx){
@@ -89,3 +86,4 @@ int playMenu(int maxy, int maxx){
 	return(0);
 	
 }
+

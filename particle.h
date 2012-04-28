@@ -6,9 +6,14 @@
 
 int getRandom(FILE* fp);
 
+typedef struct ship{
+	int leftWing[2];
+	int rightWing[2];
+	int center[2];
+} ship;
+
 typedef struct particle {
 	float c[2];  // the y and x coordinates of that particle
-	int color;
 	int ch;
 	struct particle *target;
 	struct particle *next;
@@ -33,89 +38,135 @@ typedef struct track{
 
 track *NewTrack(int maxx, int maxy);
 trackSegment *NewSegment(int space, track* t, int maxx, int maxy, int random);
-particle *NewParticle(int color, int ch, int y, int x);
+particle *NewParticle(int ch, int y, int x);
+ship* NewShip(int y, int x);
 void UpdateWalls(track *t);
 void DrawSegment(track *t);
+trackSegment* addSegment(track* t);
+void drawShip(ship* p);
+void updateTrack(track* t, int duration);
+void drawTrack(track* t);
+void moveSegmentLeft(trackSegment* s);
+void moveSegmentRight(trackSegment* s);
 
 //struct timespec delay = {0, 1000};
 
+void updateTrack(track* t, int duration){
+	
+}
+
+void moveSegmentLeft(trackSegment* s){
+	
+}
+
+void moveSegmentRight(trackSegment* s){
+
+}
+
+void drawTrack(track* t){
+	
+}
+
+void moveShipLeft(ship* p){
+	p->leftWing[1] -= 3;
+	p->center[1] -= 3;
+	p->rightWing[1] -= 3;
+	
+	//drawShip(s);
+}
+
+void moveShipRight(ship* p){
+	p->leftWing[1] += 3;
+	p->center[1] += 3;
+	p->rightWing[1] += 3;
+	//drawShip(s);
+}
+
+void drawShip(ship* s){
+	mvaddch(s->leftWing[0],s->leftWing[1], '<'); 
+	mvaddch(s->center[0],s->center[1], '='); 
+	mvaddch(s->rightWing[0],s->rightWing[1], '>'); 	
+}
+
+ship *NewShip(int y, int x){
+	ship* p = (ship *) malloc(sizeof(ship));
+	p->leftWing[0] = y;
+	p->rightWing[0]=y;
+	p->center[0]=y;
+	
+	p->leftWing[1]=x;
+	p->center[1]=x+1;
+	p->rightWing[1]=x+2;
+	return p;
+}
+
+//this is where the list of segments is created
+//returns t which is an object whose head points to the first segment of the track
 track *NewTrack(int maxx, int maxy){
-	FILE* fp=fopen("/dev/urandom","r");
+	//open this file so we can get a stream of random numbers to be used for the motion
 	int i, random;
+	
 	track *t = (track *) malloc(sizeof(track));
 	t->clock = clock();
 	t->maxx = maxx;
 	t->maxy = maxy;
 	t->tail = NULL;
-	t->head = NewSegment(25, t, maxx, maxy, random);
 	for(i = 0; i < maxy; i++){	
-		random = getRandom(fp);
-		trackSegment* curr = NewSegment(25, t, maxx, maxy, random);
+		t->head = NewSegment(10, t, maxx, maxy, random);
 	}
 	return t;
 }
 
+//this runs the first time and creates a screen full of track segments
 trackSegment *NewSegment(int space, track* t, int maxx, int maxy, int random){
-	static int currY;
-	//static int currX;
+	//currY keeps track of where on the screen to draw the next segment
+	static int currY, offset;
+	int baseX = (maxx-strlen("<=>"))/2;
+	currY++;
+	offset++;
+	
+	//new tracksegment
 	trackSegment* s = malloc(sizeof(trackSegment));
 	s->distanceApart = space;
-	/*if(t->tail == NULL){
-		t->tail = s;
-		t->head->next = s;
-		t->tail->prev = t->head;
-	}
-	else{
-		trackSegment* temp = t->tail;
-		t->tail = s;
-		temp->next = t->tail;
-		
-	}*/
-	currY++;
 	
-	//next is to actually save these particles in the linked list so they can be updated and also
-	//generate a random number to add to the x value so it looks like it's swaying back and forth
-	//
-	//now it's generating a random move to the left or right but i only want it to move by one
-	//but i want it to move over one space a random number of times
-	//whatever random returns is the number of times I want the loop to run and draw things in a certain direction
-	int j,k;
-	s->left = NewParticle(2, '>', currY, (maxx-strlen("<=>"))/2-20);
-	s->right = NewParticle(2, '<', currY, (maxx-strlen("<=>"))/2+5  );
-	//move left (random) times
-//	if(random >=5){
-	//	for(j = 0; j<random; j++){
-			mvaddch(s->left->c[0]+j, s->left->c[1], '>');
-			mvaddch(s->right->c[0]+j, s->right->c[1], '<');
-//		}
-//	}
-	//move right (random) times
-//	else if(random<5){
-	//	for(j = 0; j<random; j++){
-	//		mvaddch(s->left->c[0]+j, s->left->c[1]+j, '>');
-//			mvaddch(s->right->c[0]+j, s->right->c[1]+j, '<');
-	//	}
-//	}
+	//add it to the tail of the track
+	t->tail = s;
+	s->next = NULL;
+	
+	//offset will be how much you move the pair to the left or right
+	//if it's subtracted then it's left, added means to the right
+	s->left = NewParticle('>', currY, baseX-space);
+	s->right = NewParticle('<', currY, baseX+space);
+	mvaddch(s->left->c[0], s->left->c[1]-offset, '>');
+	mvaddch(s->right->c[0], s->right->c[1]+offset, '<');
+
 	refresh();
 	
 	return s;
+
 }
 
-particle* NewParticle(int color, int ch, int y, int x){
+particle* NewParticle(int ch, int y, int x){
 	particle *p = (particle *) malloc(sizeof(particle));
 	p->c[0] = y;  // the y and x coordinates of that particle
 	p->c[1] = x;
-	p-> color = color;
 	p-> ch = ch;
 	return p;
 }
-void DrawSegment(track *t){
-	trackSegment *s = (trackSegment *) malloc(sizeof(trackSegment));
-	//s->left = 
+
+trackSegment* addSegment(track* t){
+	
+	return t->head;
+
 }
 
-void UpdateWalls(track *t){
-  
+trackSegment* redrawTrack(track* t, int offset){
+	trackSegment* temp = t->head;
+	
+	for(temp = t->head; temp->next; temp = temp->next){
+		
+	}
+	return t->head;
 }
 
 int getRandom(FILE* fp){
@@ -130,8 +181,9 @@ int getRandom(FILE* fp){
 	
 	num = fgetc(fp);
 	srand(num);
+	num = rand()%max; 
 	
-	return(rand()%max);
+	return(num);
 	
 }
 #endif

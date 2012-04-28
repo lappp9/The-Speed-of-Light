@@ -68,22 +68,23 @@ int main()
 	          		}
 	          		break;
 	       	}
-			clear();
+			//clear();
 			
 			//get the current players position
 			getyx(stdscr, y, x);		/* get the current curser position */
 			//redraw the track
 			//sleep((1/20));  //use this to make the track redraw more slowly or quickly
-			if(duration == 0){
+			/*if(duration == 0){
 				direction = 1-direction;
 				duration = getRandom(fp);			
 			}
 			else{
 				//whatever random started as is how many times it should go to the right or left
 				duration--;
-			}
+			}*/
 			updateTrack(t, duration);
-			//drawTrack();
+			drawTrack(t);
+			//mvprintw(0,0,"sup");	
 			
 			//move the cursor back so the ship draws correctly
 			move(y,x);

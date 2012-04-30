@@ -15,8 +15,21 @@
 #include <libc.h>
 #include <pthread.h>
 
+#include <netinet/in.h>
+#include <netdb.h>
+
 #define ECHO_PORT          (2002)
 #define MAX_LINE           (1000)
+
+#define BUFSIZE 1024
+
+/* 
+ * error - wrapper for perror
+ */
+void error(char *msg) {
+    perror(msg);
+    exit(0);
+}
 
 int playMenu(int maxy, int maxx);
 int getDuration(FILE* fp);
@@ -26,7 +39,8 @@ int gameOver(int maxy, int maxx, int score, int winner);
 int duration, direction = 1;
 void* serve(void* threadid);
 
-pthread_t server, printer;
+pthread_t server, clientThread;
+int 	  player = 0;
 int       list_s;                /*  listening socket          */
 int       conn_s;                /*  connection socket         */
 short int port;                  /*  port number               */
@@ -34,6 +48,74 @@ struct    sockaddr_in servaddr;  /*  socket address structure  */
 char      buffer[MAX_LINE];      /*  character buffer          */
 char     *endptr;                /*  for strtol()              */
 char *trimwhitespace(char *str);
+int won = 0;
+char buf[BUFSIZE];
+
+
+void *client(void *threadid){
+	int sockfd, portno, n;
+	struct sockaddr_in serveraddr;
+	struct hostent *server;
+	char *hostname;
+
+	    hostname = "192.168.1.12";
+	    
+		if(player == 1){
+			portno = 2003;
+		}
+		else if(player == 2){
+			portno = 2002;
+		}
+	    /* socket: create the socket */
+	    sockfd = socket(AF_INET, SOCK_STREAM, 0);
+	    if (sockfd < 0) 
+	        error("ERROR opening socket");
+
+	    /* gethostbyname: get the server's DNS entry */
+	    server = gethostbyname(hostname);
+	    if (server == NULL) {
+	        fprintf(stderr,"ERROR, no such host as %s\n", hostname);
+	        exit(0);
+	    }
+
+	    /* build the server's Internet address */
+	    bzero((char *) &serveraddr, sizeof(serveraddr));
+	    serveraddr.sin_family = AF_INET;
+	    bcopy((char *)server->h_addr, 
+		  (char *)&serveraddr.sin_addr.s_addr, server->h_length);
+	    serveraddr.sin_port = htons(portno);
+
+	    /* connect: create a connection with the server */
+	    if (connect(sockfd, &serveraddr, sizeof(serveraddr)) < 0) 
+	      error("ERROR connecting");
+
+	    /* get message line from the user */
+	   /*printf("Please enter msg: ");
+	    bzero(buf, BUFSIZE);
+	    fgets(buf, BUFSIZE, stdin);*/
+
+	    /* send the message line to the server */
+	    while(1){
+			if(won == 1){
+				n = write(sockfd, "won", strlen("won"));
+				close(sockfd);
+				break;
+			}
+			else{
+				n = write(sockfd, "playing", strlen("playing"));
+			}
+	    	if (n < 0) 
+	      		error("ERROR writing to socket");
+		}
+	    /* print the server's reply */
+	    bzero(buf, BUFSIZE);
+	    n = read(sockfd, buf, BUFSIZE);
+	    if (n < 0) 
+	      error("ERROR reading from socket");
+	    printf("Echo from server: %s", buf);
+	    return 0;
+}
+
 
 void *serve(void *threadid)
 {	
@@ -43,7 +125,7 @@ void *serve(void *threadid)
  	if ( argc == 2 ) {
 		port = strtol(argv[1], &endptr, 0);
 		if ( *endptr ) {
-	    	//fprintf(stderr, "ECHOSERV: Invalid port number.\n");
+	    	fprintf(stderr, "ECHOSERV: Invalid port number.\n");
 	    	exit(EXIT_FAILURE);
 		}
     }
@@ -51,13 +133,13 @@ void *serve(void *threadid)
 		port = ECHO_PORT;
     }
     else {
-		//fprintf(stderr, "ECHOSERV: Invalid arguments.\n");
+		fprintf(stderr, "ECHOSERV: Invalid arguments.\n");
 		exit(EXIT_FAILURE);
     }
     //  Create the listening socket  
 
     if ( (list_s = socket(AF_INET, SOCK_STREAM, 0)) < 0 ) {
-		//fprintf(stderr, "ECHOSERV: Error creating listening socket.\n");
+		fprintf(stderr, "ECHOSERV: Error creating listening socket.\n");
 		exit(EXIT_FAILURE);
     }
 
@@ -75,16 +157,23 @@ void *serve(void *threadid)
 	//listening socket, and call listen()  
 
     if ( bind(list_s, (struct sockaddr *) &servaddr, sizeof(servaddr)) < 0 ) {
-		//fprintf(stderr, "ECHOSERV: Error calling bind()\n");
-		exit(EXIT_FAILURE);
+		player = 2;
+		servaddr.sin_port = htons(port+1);
+	    if ( bind(list_s, (struct sockaddr *) &servaddr, sizeof(servaddr)) < 0 ) {
+			fprintf(stderr, "Two people are already playing!\n");
+			exit(EXIT_FAILURE);
+		}
     }
+	else{
+		player = 1;
+	}
 
     if ( listen(list_s, LISTENQ) < 0 ) {
-		//fprintf(stderr, "ECHOSERV: Error calling listen()\n");
+		fprintf(stderr, "ECHOSERV: Error calling listen()\n");
 		exit(EXIT_FAILURE);
     }
 
-  // Enter an infinite loop to respond
+  	// Enter an infinite loop to respond
     //    to client requests and echo input  */
 
     while ( 1 ) {
@@ -92,7 +181,7 @@ void *serve(void *threadid)
 		//  Wait for a connection, then accept() it  
 
 		if ( (conn_s = accept(list_s, NULL, NULL) ) < 0 ) {
-	    	//fprintf(stderr, "ECHOSERV: Error calling accept()\n");
+	    	fprintf(stderr, "ECHOSERV: Error calling accept()\n");
 	    	exit(EXIT_FAILURE);
 		}
 
@@ -101,11 +190,12 @@ void *serve(void *threadid)
 	    //then simply write it back to the same socket.     
 
 		Readline(conn_s, buffer, MAX_LINE-1);
+		refresh();
 		Writeline(conn_s, buffer, strlen(buffer));
 
 		//  Close the connected socket  
 		if ( close(conn_s) < 0 ) {
-	    	//fprintf(stderr, "ECHOSERV: Error calling close()\n");
+	    	fprintf(stderr, "ECHOSERV: Error calling close()\n");
 	    	exit(EXIT_FAILURE);
 		}
 		//pthread_exit(0);
@@ -126,15 +216,9 @@ int main( int argc, char** argv)
 		printf("ERROR; return code from pthread_create() is %d\n", rc);
 	    exit(-1);
 	}
-	
-	//sp = pthread_create(&printer, NULL, printNum, (void *)targs);
-	
+		
 	//make all the variables and initialize a bunch of crap
-	
-	//sleep(5);
-	//use nanosleep instead
 	int startx, starty, x, y, ch, maxy, maxx,i;
-	int won = 0;
 	FILE* fp=fopen("/dev/urandom","r");
 	
 	initscr();						/* start the curses mode */
@@ -149,6 +233,25 @@ int main( int argc, char** argv)
 	//get the beginning and maximum y coordinates
 	getbegyx(stdscr, starty, startx);
 	getmaxyx(stdscr, maxy,maxx);
+	
+	//wait to be assigned a player number
+	while(player == 0){
+		mvprintw(0,0,"Assigning host... ");
+		refresh();
+	}
+	clear();
+	while(strcmp(buffer, "go") == 0){
+		if(player == 2){
+			break;
+		}
+		mvprintw(0,0,"Player %d, prepare to be matched...",player);
+		refresh();
+	}
+	mvprintw(0,0,"Match will begin in 3... 2.. 1");
+	refresh();
+	
+	//once a second player has been found let the program continue	
+	//sp = pthread_create(&clientThread, NULL, client, (void *)targs);
 	
 	//start off with menu screen
 	playMenu(maxy, maxx);
@@ -213,6 +316,9 @@ int main( int argc, char** argv)
 			won =0;
 		}
 		int score = updateTrack(t, direction);
+		mvprintw(1,0,"Player %d",player);
+		mvprintw(5,0,"The enemy says %s",buffer);
+		mvprintw(4,0,"You said %s",buf);
 		drawTrack(t);
 		attroff(COLOR_PAIR(1));
 			
@@ -301,8 +407,8 @@ int playMenu(int maxy, int maxx){
 	return(0);
 }
 
+//get the current duration left in which the wall should move a certain direction
 int getDuration(FILE* fp){
-
   if(duration){
     duration= duration -1;
     return(duration);
@@ -315,6 +421,7 @@ int getDuration(FILE* fp){
   }
 }
 
+//suplies the random numbers we need
 int getRandom(FILE* fp){
 	int max = 10;
 	//have a counter count down from one-hundred so after every one-hundred calls to the function max is decreased by one

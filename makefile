@@ -2,7 +2,7 @@ PAWPRINT=lappp9
 # set up linker options
 LDLIBS= -lncurses
 
-game: 
+game: game.o particle.o
 
 clean:
 	rm -f *.o

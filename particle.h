@@ -4,7 +4,6 @@
 #include <time.h>
 #include <stdlib.h>
 
-int getRandom(FILE* fp);
 
 typedef struct ship{
 	int leftWing[2];
@@ -14,8 +13,6 @@ typedef struct ship{
 
 typedef struct particle {
 	float c[2];  // the y and x coordinates of that particle
-	struct particle *next;
-	struct particle *prev;
 } particle;
 
 typedef struct trackSegment{
@@ -38,30 +35,45 @@ particle *NewParticle(int y, int x);
 ship* NewShip(int y, int x);
 void UpdateWalls(track *t);
 void DrawSegment(track *t);
-trackSegment* addSegment(track* t);
 void drawShip(ship* p);
-void updateTrack(track* t, int duration);
+int updateTrack(track* t, int direction);
 void drawTrack(track* t);
 void drawSegment(trackSegment* s);
 
-//struct timespec delay = {0, 1000};
-
-void updateTrack(track* t, int duration){
-	
+//returns current score
+int updateTrack(track* t, int direction){
+  static int difficultyCount;
+  static int difficulty;
 	trackSegment* temp;
-	mvprintw(0,0,"sup");	
 	temp = t->head;
-	mvprintw(0,0,"%d",temp->left->c[0]);	
+  int i;
 	//y for any segment will never change, but x will shift to the segment above it
 	for(temp = t->head; temp->next; temp = temp->next){
 		temp->left->c[1] = temp->next->left->c[1];
 		temp->right->c[1] = temp->next->right->c[1];
-		//mvprintw(0,0,"sup");	
 	}
-	//after the loop, temp should point to the tail
-	//this will have it's x shift one to the left or right based on the random number
-	
-	
+
+	//make it harder every 10 ticks
+
+
+	  //when changing the tail it will be shifted left or right by one depedning on duration being 0 or 1
+    if(direction == 1){
+    	t->tail->left->c[1] =	t->tail->left->c[1]+1; 
+    	t->tail->right->c[1] =	t->tail->right->c[1]+1; 	
+    }
+    else{
+    	t->tail->left->c[1] =	t->tail->left->c[1]-1; 
+    	t->tail->right->c[1] =	t->tail->right->c[1]-1;
+    }
+    
+  if((++difficultyCount%100) == 0 && difficulty < 6){
+    //t->tail->left->c[1] =	t->tail->left->c[1]+1;
+  	  t->tail->right->c[1] = t->tail->right->c[1]-1;
+  	  t->tail->left->c[1] = t->tail->left->c[1]+1;
+      difficulty++;
+	}
+  mvprintw(0,0,"Score: %d",(difficultyCount));
+  return(difficultyCount);
 }
 
 void drawTrack(track* t){
@@ -78,15 +90,15 @@ void drawSegment(trackSegment* s){
 }
 
 void moveShipLeft(ship* p){
-	p->leftWing[1] -= 3;
-	p->center[1] -= 3;
-	p->rightWing[1] -= 3;
+	p->leftWing[1] -= 2;
+	p->center[1] -= 2;
+	p->rightWing[1] -= 2;
 }
 
 void moveShipRight(ship* p){
-	p->leftWing[1] += 3;
-	p->center[1] += 3;
-	p->rightWing[1] += 3;
+	p->leftWing[1] += 2;
+	p->center[1] += 2;
+	p->rightWing[1] += 2;
 }
 
 void drawShip(ship* s){
@@ -110,16 +122,20 @@ ship *NewShip(int y, int x){
 //this is where the list of segments is created
 //returns t which is an object whose head points to the first segment of the track
 track *NewTrack(int maxx, int maxy){
-	//open this file so we can get a stream of random numbers to be used for the motion
 	int i, random;
 	
 	track *t = (track *) malloc(sizeof(track));
 	t->maxx = maxx;
 	t->maxy = maxy;
-	t->tail = NULL;
-	for(i = 0; i < maxy; i++){	
+	t->tail = NewSegment(10, t, maxx, maxy);
+	drawSegment(t->tail);
+	for(i = 0; i < maxy-2; i++){
 		t->head = NewSegment(10, t, maxx, maxy);
+		//drawSegment(t->head);
 	}
+	drawSegment(t->head);
+
+	refresh();
 	return t;
 }
 
@@ -136,20 +152,14 @@ trackSegment *NewSegment(int space, track* t, int maxx, int maxy){
 	s->distanceApart = space;
 	
 	//add it to the tail of the track
-	t->tail = s;
-	s->next = NULL;
+	s->next = t->head;
+	t->head = s;
 	
 	//offset will be how much you move the pair to the left or right
 	//if it's subtracted then it's left, added means to the right
 	s->left = NewParticle(currY, baseX-space);
 	s->right = NewParticle(currY, baseX+space);
 	
-	
-	
-	//drawSegment(s);
-	mvaddch(s->left->c[0], s->left->c[1]-offset, '>');
-	mvaddch(s->right->c[0], s->right->c[1]+offset, '<');
-
 	refresh();
 	
 	return s;
@@ -163,22 +173,4 @@ particle* NewParticle(int y, int x){
 	return p;
 }
 
-
-int getRandom(FILE* fp){
-	static int max = 10;
-	static int counter;
-	//have a counter count down from one-hundred so after every one-hundred calls to the function max is decreased by one
-	int num;
-	if (fp==NULL){
-		printf("effed");
-		exit(1);	
-	}
-	
-	num = fgetc(fp);
-	srand(num);
-	num = rand()%max; 
-	
-	return(num);
-	
-}
 #endif

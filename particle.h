@@ -3,7 +3,7 @@
 
 #include <time.h>
 #include <stdlib.h>
-#include <ncurses.h>
+
 
 typedef struct ship{
 	int leftWing[2];
@@ -39,6 +39,7 @@ void drawShip(ship* p);
 int updateTrack(track* t, int direction);
 void drawTrack(track* t);
 void drawSegment(trackSegment* s);
+int stillAlive(trackSegment* s, ship* p);
 void moveShipLeft(ship* p);
 void moveShipRight(ship* p);
 

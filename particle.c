@@ -137,3 +137,13 @@ particle* NewParticle(int y, int x){
 	p->c[1] = x;
 	return p;
 }
+
+int stillAlive(trackSegment* s, ship* p){
+  //if s->leftWing, s->rightWing, or s->center have the same x value as head->left or head->right
+    //then return 0 so they go to the death screen
+  if(p->leftWing[1] == s->left->c[1] || p->center[1]== s->left->c[1]  || p->rightWing[1]== s->left->c[1]) 
+    return 0;
+  if(p->leftWing[1] == s->right->c[1] || p->center[1]== s->right->c[1]  || p->rightWing[1]== s->right->c[1])
+    return 0;
+  return 1;
+}

@@ -1,8 +1,8 @@
 PAWPRINT=lappp9
 # set up linker options
-LDLIBS= -lncurses
+LDLIBS= -lncurses -pthread
 
-game: game.o particle.o
+game: game.o particle.o 
 
 clean:
 	rm -f *.o
@@ -23,3 +23,7 @@ game.tar.gz: game.c makefile submit.sh
 
 submit: submit.sh game.tar.gz
 	PAWPRINT=$(PAWPRINT) sh submit.sh game.tar.gz
+
+
+
+

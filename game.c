@@ -6,6 +6,8 @@
 int playMenu(int maxy, int maxx);
 int getDuration(FILE* fp);
 int stillAlive(trackSegment* s, ship* p);
+int getRandom(FILE* fp);
+int gameOver(int maxy, int maxx, int score);
 int duration, direction = 1;
 
 int main()

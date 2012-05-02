@@ -43,6 +43,7 @@ int winner;
 int alive = 1;
 long targs;
 int sp;
+int mode; // 0 for single player, 1 for multiplayer
 
 
 pthread_t server, clientThread;
@@ -173,7 +174,6 @@ int main( int argc, char** argv)
 		}
 		int score = updateTrack(t, direction);
 		mvprintw(1,0,"Player %d",player);
-		mvprintw(5,0,"The enemy is %s!",state);
 		drawTrack(t);
 		attroff(COLOR_PAIR(1));
 			
@@ -207,7 +207,8 @@ int main( int argc, char** argv)
 int gameOver(int maxy, int maxx, int score, int winner){
 	
 	//if(player ==2)
-	sp = pthread_create(&clientThread, NULL, client, (void *)targs);
+	if(won != 1)	
+		sp = pthread_create(&clientThread, NULL, client, (void *)targs);
 	
 	alive = 0;
 	init_pair(4, COLOR_RED, COLOR_WHITE);
@@ -437,7 +438,7 @@ void *serve(void *threadid)
 		}
 
 
-		//  Retrieve an input line from the connected socket
+		//Retrieve an input line from the connected socket
 	    //then write your state back to the client    
 		Readline(conn_s, buffer, MAX_LINE-1);
 		strcpy(state, buffer);

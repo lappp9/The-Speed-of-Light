@@ -38,6 +38,12 @@ int getRandom(FILE* fp);
 int gameOver(int maxy, int maxx, int score, int winner);
 int duration, direction = 1;
 void* serve(void* threadid);
+void* client(void* threadid);
+int winner;
+int alive = 1;
+long targs;
+int sp;
+
 
 pthread_t server, clientThread;
 int 	  player = 0;
@@ -50,164 +56,13 @@ char     *endptr;                /*  for strtol()              */
 char *trimwhitespace(char *str);
 int won = 0;
 char buf[BUFSIZE];
+char state[BUFSIZE];
 
-
-void *client(void *threadid){
-	int sockfd, portno, n;
-	struct sockaddr_in serveraddr;
-	struct hostent *server;
-	char *hostname;
-
-	    hostname = "192.168.1.12";
-	    
-		if(player == 1){
-			portno = 2003;
-		}
-		else if(player == 2){
-			portno = 2002;
-		}
-	    /* socket: create the socket */
-	    sockfd = socket(AF_INET, SOCK_STREAM, 0);
-	    if (sockfd < 0) 
-	        error("ERROR opening socket");
-
-	    /* gethostbyname: get the server's DNS entry */
-	    server = gethostbyname(hostname);
-	    if (server == NULL) {
-	        fprintf(stderr,"ERROR, no such host as %s\n", hostname);
-	        exit(0);
-	    }
-
-	    /* build the server's Internet address */
-	    bzero((char *) &serveraddr, sizeof(serveraddr));
-	    serveraddr.sin_family = AF_INET;
-	    bcopy((char *)server->h_addr, 
-		  (char *)&serveraddr.sin_addr.s_addr, server->h_length);
-	    serveraddr.sin_port = htons(portno);
-
-	    /* connect: create a connection with the server */
-	    if (connect(sockfd, &serveraddr, sizeof(serveraddr)) < 0) 
-	      error("ERROR connecting");
-
-	    /* get message line from the user */
-	   /*printf("Please enter msg: ");
-	    bzero(buf, BUFSIZE);
-	    fgets(buf, BUFSIZE, stdin);*/
-
-	    /* send the message line to the server */
-	    while(1){
-			if(won == 1){
-				n = write(sockfd, "won", strlen("won"));
-				close(sockfd);
-				break;
-			}
-			else{
-				n = write(sockfd, "playing", strlen("playing"));
-			}
-	    	if (n < 0) 
-	      		error("ERROR writing to socket");
-		}
-	    /* print the server's reply */
-	    bzero(buf, BUFSIZE);
-	    n = read(sockfd, buf, BUFSIZE);
-	    if (n < 0) 
-	      error("ERROR reading from socket");
-	    printf("Echo from server: %s", buf);
-	    return 0;
-}
-
-
-void *serve(void *threadid)
-{	
-	int argc = 1;
-	char* argv[2];
-	argv[0] = "a.out";
- 	if ( argc == 2 ) {
-		port = strtol(argv[1], &endptr, 0);
-		if ( *endptr ) {
-	    	fprintf(stderr, "ECHOSERV: Invalid port number.\n");
-	    	exit(EXIT_FAILURE);
-		}
-    }
-    else if ( argc < 2 ) {
-		port = ECHO_PORT;
-    }
-    else {
-		fprintf(stderr, "ECHOSERV: Invalid arguments.\n");
-		exit(EXIT_FAILURE);
-    }
-    //  Create the listening socket  
-
-    if ( (list_s = socket(AF_INET, SOCK_STREAM, 0)) < 0 ) {
-		fprintf(stderr, "ECHOSERV: Error creating listening socket.\n");
-		exit(EXIT_FAILURE);
-    }
-
-
-    //  Set all bytes in socket address structure to
-     //   zero, and fill in the relevant data members
-
-    memset(&servaddr, 0, sizeof(servaddr));
-    servaddr.sin_family      = AF_INET;
-    servaddr.sin_addr.s_addr = htonl(INADDR_ANY);
-    servaddr.sin_port        = htons(port);
-
-
-    //  Bind our socket addresss to the 
-	//listening socket, and call listen()  
-
-    if ( bind(list_s, (struct sockaddr *) &servaddr, sizeof(servaddr)) < 0 ) {
-		player = 2;
-		servaddr.sin_port = htons(port+1);
-	    if ( bind(list_s, (struct sockaddr *) &servaddr, sizeof(servaddr)) < 0 ) {
-			fprintf(stderr, "Two people are already playing!\n");
-			exit(EXIT_FAILURE);
-		}
-    }
-	else{
-		player = 1;
-	}
-
-    if ( listen(list_s, LISTENQ) < 0 ) {
-		fprintf(stderr, "ECHOSERV: Error calling listen()\n");
-		exit(EXIT_FAILURE);
-    }
-
-  	// Enter an infinite loop to respond
-    //    to client requests and echo input  */
-
-    while ( 1 ) {
-
-		//  Wait for a connection, then accept() it  
-
-		if ( (conn_s = accept(list_s, NULL, NULL) ) < 0 ) {
-	    	fprintf(stderr, "ECHOSERV: Error calling accept()\n");
-	    	exit(EXIT_FAILURE);
-		}
-
-
-		//  Retrieve an input line from the connected socket
-	    //then simply write it back to the same socket.     
-
-		Readline(conn_s, buffer, MAX_LINE-1);
-		refresh();
-		Writeline(conn_s, buffer, strlen(buffer));
-
-		//  Close the connected socket  
-		if ( close(conn_s) < 0 ) {
-	    	fprintf(stderr, "ECHOSERV: Error calling close()\n");
-	    	exit(EXIT_FAILURE);
-		}
-		//pthread_exit(0);
-		
-    }
-}
 
 int main( int argc, char** argv)
 {
 
 	//spawn server thread to listen to opponents status
-	long targs;
     int rc, sp;
 	rc = pthread_create(&server, NULL, serve, (void *)targs);
 	//pthread_detach(server);
@@ -240,18 +95,19 @@ int main( int argc, char** argv)
 		refresh();
 	}
 	clear();
-	while(strcmp(buffer, "go") == 0){
+	/*while(strcmp(buffer, "go") == 0){
 		if(player == 2){
 			break;
 		}
 		mvprintw(0,0,"Player %d, prepare to be matched...",player);
 		refresh();
 	}
-	mvprintw(0,0,"Match will begin in 3... 2.. 1");
+	mvprintw(0,0,"Match will begin in 3... 2.. 1");*/
 	refresh();
 	
 	//once a second player has been found let the program continue	
-	//sp = pthread_create(&clientThread, NULL, client, (void *)targs);
+	//if(player == 2)
+		//sp = pthread_create(&clientThread, NULL, client, (void *)targs);
 	
 	//start off with menu screen
 	playMenu(maxy, maxx);
@@ -305,9 +161,9 @@ int main( int argc, char** argv)
 
 		duration = getDuration(fp);
 		
-		char* winner = trimwhitespace(buffer); 
+		char* opponentState = trimwhitespace(buffer); 
 		attron(COLOR_PAIR(1));
-		if(strcmp(winner ,"won") == 0){
+		if(strcmp(opponentState ,"won") == 0){
 			mvprintw(2,0,"Your opponent died!");
 			won = 1;
 		}	
@@ -317,8 +173,7 @@ int main( int argc, char** argv)
 		}
 		int score = updateTrack(t, direction);
 		mvprintw(1,0,"Player %d",player);
-		mvprintw(5,0,"The enemy says %s",buffer);
-		mvprintw(4,0,"You said %s",buf);
+		mvprintw(5,0,"The enemy is %s!",state);
 		drawTrack(t);
 		attroff(COLOR_PAIR(1));
 			
@@ -350,7 +205,12 @@ int main( int argc, char** argv)
 
 
 int gameOver(int maxy, int maxx, int score, int winner){
-  	init_pair(4, COLOR_RED, COLOR_WHITE);
+	
+	//if(player ==2)
+	sp = pthread_create(&clientThread, NULL, client, (void *)targs);
+	
+	alive = 0;
+	init_pair(4, COLOR_RED, COLOR_WHITE);
 	init_pair(3, COLOR_BLUE, COLOR_WHITE);
 	WINDOW *menu_win;
 	initscr();
@@ -455,4 +315,140 @@ char *trimwhitespace(char *str)
   *(end+1) = 0;
 
   return str;
+}
+
+
+void *client(void *threadid){
+	int sockfd, portno, n;
+	struct sockaddr_in serveraddr;
+	struct hostent *server;
+	char *hostname;
+
+	    hostname = "192.168.1.12";
+	    
+		if(player == 2){
+			portno = 2002;
+	    }
+		else{
+			portno = 2003;
+		}
+		/* socket: create the socket */
+	    sockfd = socket(AF_INET, SOCK_STREAM, 0);
+	    if (sockfd < 0) 
+	        error("ERROR opening socket");
+
+	    /* gethostbyname: get the server's DNS entry */
+	    server = gethostbyname(hostname);
+	    if (server == NULL) {
+	        fprintf(stderr,"ERROR, no such host as %s\n", hostname);
+	        exit(0);
+	    }
+
+	    /* build the server's Internet address */
+	    bzero((char *) &serveraddr, sizeof(serveraddr));
+	    serveraddr.sin_family = AF_INET;
+	    bcopy((char *)server->h_addr, 
+		  (char *)&serveraddr.sin_addr.s_addr, server->h_length);
+	    serveraddr.sin_port = htons(portno);
+
+	    /* get message line from the user */
+	   /*printf("Please enter msg: ");
+	    bzero(buf, BUFSIZE);
+	    fgets(buf, BUFSIZE, stdin);*/
+			/* connect: create a connection with the server */
+		if (connect(sockfd, (void *)&serveraddr, sizeof(serveraddr)) < 0) 
+			error("ERROR connecting");
+	    /* send the message line to the server */
+	    //while(1){
+
+			//if(winner == 2){
+				strcpy(buf, "won");
+				n = write(sockfd, buf, strlen(buf));
+				close(sockfd);
+//				break;
+			//}
+			/*else{
+				strcpy(buf, "alive");
+				n = write(sockfd, buf, strlen(buf));
+				close(sockfd);
+				
+			}*/
+	    	if (n < 0) 
+	      		error("ERROR writing to socket");
+		//}
+	    /* print the server's reply */
+	    //bzero(buf, BUFSIZE);
+	    //n = read(sockfd, buf, BUFSIZE);
+	    //if (n < 0) 
+	      //error("ERROR reading from socket");
+	    //printf("Echo from server: %s", buf);
+	    return 0;
+}
+
+
+void *serve(void *threadid)
+{	
+	port = ECHO_PORT;
+    //  Create the listening socket  
+
+    if ( (list_s = socket(AF_INET, SOCK_STREAM, 0)) < 0 ) {
+		fprintf(stderr, "ECHOSERV: Error creating listening socket.\n");
+		exit(EXIT_FAILURE);
+    }
+
+   	//  Set all bytes in socket address structure to
+	//   zero, and fill in the relevant data members
+
+   	memset(&servaddr, 0, sizeof(servaddr));
+   	servaddr.sin_family      = AF_INET;
+   	servaddr.sin_addr.s_addr = htonl(INADDR_ANY);
+   	servaddr.sin_port        = htons(port);
+
+    //Bind our socket addresss to the 
+	//listening socket, and call listen()  
+
+    if ( bind(list_s, (struct sockaddr *) &servaddr, sizeof(servaddr)) < 0 ) {
+		player = 2;
+		servaddr.sin_port = htons(port+1);
+	    if (bind(list_s, (struct sockaddr *) &servaddr, sizeof(servaddr)) < 0) {
+			fprintf(stderr, "Two people are already playing!\n");
+			exit(EXIT_FAILURE);
+		}
+    }
+	else{
+		player = 1;
+	}
+
+    if (listen(list_s, LISTENQ) < 0) {
+		fprintf(stderr, "ECHOSERV: Error calling listen()\n");
+		exit(EXIT_FAILURE);
+    }
+
+  	// Enter an infinite loop to respoqqnd
+    //    to client requests and echo input  */
+
+    while ( 1 ) {
+
+		//  Wait for a connection, then accept() it  
+
+		if ((conn_s = accept(list_s, NULL, NULL)) < 0 ) {
+	    	fprintf(stderr, "ECHOSERV: Error calling accept()\n");
+	    	exit(EXIT_FAILURE);
+		}
+
+
+		//  Retrieve an input line from the connected socket
+	    //then write your state back to the client    
+		Readline(conn_s, buffer, MAX_LINE-1);
+		strcpy(state, buffer);
+		Writeline(conn_s, buffer, strlen(buffer));
+
+		//  Close the connected socket  
+		if ( close(conn_s) < 0 ) {
+	    	fprintf(stderr, "ECHOSERV: Error calling close()\n");
+	    	exit(EXIT_FAILURE);
+		}
+		//pthread_exit(0);
+		
+    }
 }
